@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Category Management</title>
+  <link rel="stylesheet" href="css/category.css">
+</head>
+<body>
+  <center><h2>Add / Edit Category</h2></center>
+  <form id="categoryForm">
+    <input type="hidden" name="id" id="categoryId">
+    <input type="text" name="name" id="name" placeholder="Category Name" required>
+    <select name="parent_id" id="parentCategorySelect">
+      <option value="">-- None (Top Level) --</option>
+    </select>
+    <button type="submit">Save Category</button>
+  </form>
+
+  <h2>All Categories</h2>
+  <table border="1" id="categoryTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>Parent</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadCategories() {
+      const res = await fetch('/categories');
+      const categories = await res.json();
+      const select = document.getElementById('parentCategorySelect');
+      const tbody = document.querySelector('#categoryTable tbody');
+      select.innerHTML = `<option value="">-- None (Top Level) --</option>`;
+      tbody.innerHTML = '';
+
+      categories.forEach(cat => {
+        // Parent select dropdown
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        select.appendChild(option);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${cat.id}</td>
+          <td>${cat.name}</td>
+          <td>${cat.parent_id || 'None'}</td>
+          <td>
+            <button onclick="editCategory(${cat.id}, '${cat.name}', ${cat.parent_id})">Edit</button>
+            <button onclick="deleteCategory(${cat.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function deleteCategory(id) {
+      if (confirm('Are you sure?')) {
+        await fetch(`/categories/${id}`, { method: 'DELETE' });
+        loadCategories();
+      }
+    }
+
+    function editCategory(id, name, parent_id) {
+      document.getElementById('categoryId').value = id;
+      document.getElementById('name').value = name;
+      document.getElementById('parentCategorySelect').value = parent_id || '';
+    }
+
+    document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('categoryId').value;
+      const name = document.getElementById('name').value;
+      const parent_id = document.getElementById('parentCategorySelect').value || null;
+
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/categories/${id}` : '/categories';
+
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, parent_id })
+      });
+
+      e.target.reset();
+      loadCategories();
+    });
+
+    window.onload = loadCategories;
+  </script>
+</body>
+</html>

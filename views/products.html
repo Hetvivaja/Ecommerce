@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Products</title>
+  <link rel="stylesheet" href="/css/product.css">
+</head>
+<body>
+
+  <center><h2 id="formTitle">Add Product</h2></center>
+  <form id="productForm" enctype="multipart/form-data">
+    <input type="hidden" id="productId" name="productId">
+
+    <label for="name">Product Name</label>
+    <input type="text" id="name" name="name" required><br>
+
+    <label for="price">Price</label>
+    <input type="number" id="price" name="price" required><br>
+
+    <label for="category_id">Category</label>
+    <select id="category_id" name="category_id" required>
+      <option value="">-- Select Category --</option>
+      <option value="1">Shoes</option>
+      <option value="2">Electronics</option>
+      <option value="3">Toys</option>
+       <option value="3">Other</option>
+    </select><br>
+
+    <label for="image">Image</label>
+    <input type="file" id="image" name="image"><br>
+
+    <label for="description">Description</label>
+    <textarea id="description" name="description" required></textarea><br>
+
+    <button type="submit">Save Product</button>
+    <button type="button" id="cancelEdit" style="display:none">Cancel</button>
+  </form>
+
+  <hr>
+
+  <h2>Product List</h2>
+  <div id="productList"></div>
+
+  <script>
+    const form = document.getElementById('productForm');
+    const productList = document.getElementById('productList');
+    const cancelEditBtn = document.getElementById('cancelEdit');
+    const formTitle = document.getElementById('formTitle');
+
+    // Load products 
+    window.onload = loadProducts;
+
+    async function loadProducts() {
+      const res = await fetch('/products/all');
+      const products = await res.json();
+
+      productList.innerHTML = products.map(p => `
+        <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+          <img src="/images/${p.image}" width="100"><br>
+          <strong>${p.name}</strong><br>
+          Price: $${p.price}<br>
+          ${p.description}<br>
+          <button onclick="editProduct(${p.id})">Edit</button>
+          <button onclick="deleteProduct(${p.id})">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    // Submit 
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const id = document.getElementById('productId').value;
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/products/${id}` : '/products';
+
+      const res = await fetch(url, {
+        method,
+        body: formData
+      });
+
+      if (res.ok) {
+        alert(id ? 'Product updated!' : 'Product added!');
+        form.reset();
+        document.getElementById('productId').value = '';
+        formTitle.innerText = 'Add Product';
+        cancelEditBtn.style.display = 'none';
+        loadProducts();
+      } else {
+        alert('Error submitting product');
+      }
+    });
+
+    // Delete 
+    async function deleteProduct(id) {
+      if (confirm('Are you sure you want to delete this product?')) {
+        const res = await fetch(`/products/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert('Product deleted!');
+          loadProducts();
+        } else {
+          alert('Error deleting product');
+        }
+      }
+    }
+
+    // Edit 
+    async function editProduct(id) {
+      const res = await fetch('/products/all');
+      const products = await res.json();
+      const p = products.find(p => p.id === id);
+
+      document.getElementById('productId').value = p.id;
+      document.getElementById('name').value = p.name;
+      document.getElementById('price').value = p.price;
+      document.getElementById('description').value = p.description;
+      document.getElementById('category_id').value = p.category_id;
+      formTitle.innerText = 'Edit Product';
+      cancelEditBtn.style.display = 'inline-block';
+    }
+
+    // Cancel
+    cancelEditBtn.addEventListener('click', () => {
+      form.reset();
+      document.getElementById('productId').value = '';
+      formTitle.innerText = 'Add Product';
+      cancelEditBtn.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
